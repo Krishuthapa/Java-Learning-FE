@@ -1,0 +1,8 @@
+.input-container {
+	width: 100%;
+	margin-bottom: 16px;
+}
+
+#todo-input {
+	width: 98%;
+}
