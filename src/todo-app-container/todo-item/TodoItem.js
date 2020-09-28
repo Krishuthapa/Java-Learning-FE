@@ -15,7 +15,7 @@ class TodoItem extends Component {
 					></input>
 
 					<span className={`todo-value ${this.props.isCompleted ? 'completed' : ''}`}>
-						{this.props.content.value}
+						{this.props.content.todoInfo}
 					</span>
 				</div>
 
