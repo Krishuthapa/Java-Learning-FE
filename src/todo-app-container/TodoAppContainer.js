@@ -5,9 +5,10 @@ import TodoInput from './todo-input/TodoInput';
 
 import './TodoAppContainer.css';
 
+import { isEmpty as isObjectEmpty } from '../utils/objectUtil';
 import { isEmpty as isStringEmpty, trimString } from '../utils/stringUtil';
 
-let id_counter = 0;
+import { fetchTodos, addTodo, deleteTodo, updateTodoStatus } from '../serivces/TodoService';
 
 class TodoAppContainer extends Component {
 	/**
@@ -29,6 +30,39 @@ class TodoAppContainer extends Component {
 	}
 
 	/**
+	 * Lifecylce callback invoked when the component is
+	 * mounted to the dom.
+	 */
+	componentDidMount() {
+		this.fetchAndSetTodos();
+	}
+
+	/**
+	 * Fetches and sets the todo.
+	 */
+	async fetchAndSetTodos() {
+		const response = await this.fetchTodos();
+
+		if (response.isError) {
+			console.error(response.error);
+			return;
+		}
+
+		this.setState({ todos: [...response] });
+	}
+
+	/**
+	 * Fetches the todo via the api call.
+	 */
+	async fetchTodos() {
+		try {
+			return await fetchTodos();
+		} catch (error) {
+			return { isError: true, error };
+		}
+	}
+
+	/**
 	 * Handles the change in input of todo.
 	 * @param {Object} event
 	 */
@@ -37,9 +71,16 @@ class TodoAppContainer extends Component {
 	}
 
 	/**
+	 * Creates the payload while uploading todo.
+	 */
+	createUploadPayload() {
+		return { isCompleted: false, todoInfo: this.state.todoInput };
+	}
+
+	/**
 	 * Handles the submission of input.
 	 */
-	onTodoInputSubmit() {
+	async onTodoInputSubmit() {
 		const trimmedInputValue = !isStringEmpty(this.state.todoInput)
 			? trimString(this.state.todoInput)
 			: this.state.todoInput;
@@ -48,13 +89,31 @@ class TodoAppContainer extends Component {
 			return;
 		}
 
-		this.setState({
-			todos: [...this.state.todos, { id: id_counter, isCompleted: false, value: this.state.todoInput }],
-		});
+		const payload = this.createUploadPayload();
+
+		const response = await this.addTodo(payload);
+
+		if (response.isError) {
+			console.error(response.error);
+			return;
+		}
 
 		this.setState({ todoInput: '' });
 
-		id_counter += 1;
+		this.fetchAndSetTodos();
+	}
+
+	/**
+	 * Adds a new todo via an api call.
+	 *
+	 * @param {Object} payload
+	 */
+	async addTodo(payload) {
+		try {
+			return await addTodo(payload);
+		} catch (error) {
+			return { isError: true, error };
+		}
 	}
 
 	/**
@@ -63,10 +122,43 @@ class TodoAppContainer extends Component {
 	 * @param {Event} event
 	 * @param {Number} id
 	 */
-	onTodoDeleteClick(event, id) {
-		const filteredTodos = this.state.todos.filter((todo) => todo.id !== id);
+	async onTodoDeleteClick(event, id) {
+		const response = await this.deleteTodo(id);
 
-		this.setState({ todos: [...filteredTodos] });
+		if (response.isError) {
+			console.error(response.error);
+			return;
+		}
+
+		this.fetchAndSetTodos();
+	}
+
+	/**
+	 * Deletes the todo of a given id.
+	 *
+	 * @param {Number} id
+	 */
+	async deleteTodo(id) {
+		try {
+			return await deleteTodo({ id });
+		} catch (error) {
+			return { isError: true, error };
+		}
+	}
+
+	/**
+	 * Creates the payload for change in status.
+	 *
+	 * @param {Number} id
+	 */
+	createStatusChangedTodoPayload(todoId) {
+		const changedTodo = this.state.todos.find((todo) => todo.id === todoId);
+
+		if (!isObjectEmpty(changedTodo)) {
+			return { isCompleted: !changedTodo.isCompleted };
+		}
+
+		return { isCompleted: false };
 	}
 
 	/**
@@ -75,16 +167,31 @@ class TodoAppContainer extends Component {
 	 * @param {Event} event
 	 * @param {Number} id
 	 */
-	onTodoStatusChange(event, id) {
-		const updatedTodos = this.state.todos.map((todo) => {
-			if (todo.id === id) {
-				return { ...todo, isCompleted: !todo.isCompleted };
-			}
+	async onTodoStatusChange(event, id) {
+		const payload = this.createStatusChangedTodoPayload(id);
 
-			return { ...todo };
-		});
+		const response = await this.updateTodoStatus(id, payload);
 
-		this.setState({ todos: [...updatedTodos] });
+		if (response.isError) {
+			console.error(response.error);
+			return;
+		}
+
+		this.fetchAndSetTodos();
+	}
+
+	/**
+	 * Updates the status of todo via an api call.
+	 *
+	 * @param {Number} id
+	 * @param {Object} payload
+	 */
+	async updateTodoStatus(id, payload) {
+		try {
+			return await updateTodoStatus(id, payload);
+		} catch (error) {
+			return { isError: true, error };
+		}
 	}
 
 	/**
